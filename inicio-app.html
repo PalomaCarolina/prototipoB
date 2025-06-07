@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>App Diabetes Prototipo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="./css/prototipo_styles.css">
+<link rel="icon" type="image/png" href="./IMG/prototipo_assets/molecule_dark_icon.png">
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+</head>
+<body class=" col-sm-4">
+    <header class=" row align-items-center">
+            <h1 class="p-4 col-9"> Inicio</h1> <button type="button" class="btn col-2"> <a href="./perfil.html"><img src="./IMG/prototipo_assets/account_circle_24dp_FFF_FILL0_wght400_GRAD0_opsz24.svg" alt=""></a></button>
+    </header>
+    <main class="container-sm ">
+       <section class=" m-2 row gap-3 text-center ">
+        <div class="card col-12">
+          <div id="myChart" style="width:100%; height:400px;"></div>
+        </div>
+
+        <div class="card col-12">
+          <div class="card-body">
+            <h5 class="card-title">
+              <img src="./IMG/prototipo_assets/monitor_heart_24dp_206487_FILL0_wght400_GRAD0_opsz24.svg">
+              Última medición de glucosa
+            </h5>
+            <p class="small">Ingresa tu ultima medición de glucosa en mg/dl</p>
+            <div class="row medicion m-2 align-items-center justify-content-center">
+              <input type="number" class="col-6 input-medicion" id="medicion" placeholder="">
+              <div class="col-6">
+                <button type="button" class="btn col-12" id="addMedicionBtn">Añadir</button>
+                <div id="liveAlertPlaceholder"></div>
+                <script>
+                  const alertPlaceholder = document.getElementById('liveAlertPlaceholder')
+                  const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div')
+                    wrapper.innerHTML = [
+                      `<div class="  alert alert-${type} alert-dismissible" role="alert">`,
+                      `   <div>${message}</div>`,
+                      '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                      '</div>'
+                    ].join('')
+
+                    alertPlaceholder.append(wrapper)
+                  }
+
+                  const alertTrigger = document.getElementById('addMedicionBtn')
+                  if (alertTrigger) {
+                    alertTrigger.addEventListener('click', () => {
+                      appendAlert('Medición guardada', 'success')
+                    })
+                  }
+                </script>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          // Inicializar datos con 7 días (puedes cambiar los valores iniciales si lo deseas)
+          let mediciones = [
+            [1, 90], [2, 110], [3, 100], [4, 90],
+            [5, 105], [6, 107], [7, 90]
+          ];
+
+          google.charts.load('current', { packages: ['corechart'] });
+          google.charts.setOnLoadCallback(drawChart);
+
+          function drawChart() {
+            const dataArray = [['Día', 'Medición'], ...mediciones];
+            const data = google.visualization.arrayToDataTable(dataArray);
+
+            const options = {
+              title: 'Mediciones de los últimos 7 días',
+              hAxis: {
+                title: 'día',
+                scaleType: 'numeric',
+                ticks: mediciones.map(m => m[0])
+              },
+              vAxis: { 
+                title: 'mg/dl',
+                gridlines: { color: '#eee' },
+                baseline: 0,
+                viewWindow: {
+                  min: Math.min(60, ...mediciones.map(m => m[1])),
+                  max: Math.max(150, ...mediciones.map(m => m[1]))
+                }
+              },
+              legend: 'none',
+              colors: ['#206487'],
+              pointShape: 'circle',
+              pointSize: 10,
+              series: {
+                0: { color: '#206487' }
+              },
+              annotations: {
+                alwaysOutside: false
+              }
+            };
+
+            // Draw the chart first
+            const chart = new google.visualization.LineChart(document.getElementById('myChart'));
+            chart.draw(data, options);
+
+            // Draw red lines for min (70) and max (140)
+            const cli = chart.getChartLayoutInterface();
+            const chartDiv = document.getElementById('myChart');
+            const svg = chartDiv.getElementsByTagName('svg')[0];
+            if (svg) {
+              // Remove previous lines if any
+              const oldLines = svg.querySelectorAll('.custom-red-line');
+              oldLines.forEach(line => line.remove());
+
+              // Helper to draw a horizontal line at a given value
+              function drawRedLine(yValue) {
+                const chartArea = cli.getChartAreaBoundingBox();
+                const y = cli.getYLocation(yValue);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', chartArea.left);
+                line.setAttribute('x2', chartArea.left + chartArea.width);
+                line.setAttribute('y1', y);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', 'red');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('class', 'custom-red-line');
+                svg.appendChild(line);
+              }
+
+              drawRedLine(70);
+              drawRedLine(140);
+            }
+          }
+
+          document.getElementById('addMedicionBtn').addEventListener('click', function () {
+            const input = document.getElementById('medicion');
+            const valor = parseInt(input.value, 10);
+            if (!isNaN(valor)) {
+              // Añadir la nueva medición como el siguiente día
+              const nextDay = mediciones.length ? mediciones[mediciones.length - 1][0] + 1 : 1;
+              mediciones.push([nextDay, valor]);
+              // Mantener solo las últimas 7 mediciones
+              if (mediciones.length > 7) mediciones = mediciones.slice(-7);
+              drawChart();
+              input.value = '';
+            }
+          });
+        </script>
+          
+       </section>
+       <section class="m-5 text-center ">
+         <label class="text-secondary">
+           Al completar tu perfil obtendras información personalizada sobre el progreso de tu salud.
+          </label>
+          <a href="./perfil.html" type="button" class="btn btn-light text-secondary col-12 m-1"><i class="bi bi-person-circle"></i>  Completa tu perfil</a>
+        </div>
+        
+       </section>
+    
+       <a href="ayuda.html" type="button" class="btn floating-button "> <img class="appeareance" src="./IMG/prototipo_assets/help_44dp_62597C_FILL0_wght400_GRAD0_opsz48.svg" alt=""> </a>
+      </main>
+      <nav class="row pt-3 pb-2 sticky-bottom bg-body-tertiary">
+        <ul class="   justify-content-center   ">
+            <li class=" nav_item col-2 align-top active_screen"> <a href="#" class=""><img src="./IMG/prototipo_assets/home_24dp_4F616D_FILL0_wght400_GRAD0_opsz24.svg"> <br>Inicio</a></li>
+            <li class="nav_item col-2 align-top"><a href="./informe.html" class=""><img src="./IMG/prototipo_assets/lab_profile_24dp_4F616D_FILL0_wght400_GRAD0_opsz24.svg" alt=""><br>Informe</a> </li>
+            <li class="nav_item col-2 align-top "><a href="./medicion.html" class=""><img src="./IMG/prototipo_assets/add_circle_24dp_4F616D_FILL0_wght400_GRAD0_opsz24.svg" alt=""><br>Añadir entrada</a> </li>
+           
+        </ul>
+    </nav>
+    <footer>
+    <footer>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+    </footer>
+</body>
+</html>
